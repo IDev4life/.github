@@ -1,0 +1,65 @@
+name: Reusable Docker Build
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        required: true
+        type: string
+        description: "Tên image, ví dụ: dev1sme/my-app"
+      dockerfile_path:
+        required: false
+        type: string
+        default: "./Dockerfile"
+      build_target:
+        required: false
+        type: string
+        default: "production"
+      registry:
+        required: false
+        type: string
+        default: "ghcr.io"
+    secrets:
+      REGISTRY_TOKEN:
+        required: true
+      TELEGRAM_BOT_TOKEN:
+        required: true
+      TELEGRAM_CHAT_ID:
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Registry
+        run: |
+          echo "${{ secrets.REGISTRY_TOKEN }}" | \
+          docker login ${{ inputs.registry }} \
+            -u ${{ github.actor }} \
+            --password-stdin
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f ${{ inputs.dockerfile_path }} \
+            -t ${{ inputs.registry }}/${{ inputs.image_name }}:${{ github.sha }} \
+            -t ${{ inputs.registry }}/${{ inputs.image_name }}:latest \
+            --target ${{ inputs.build_target }} \
+            .
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ inputs.registry }}/${{ inputs.image_name }}:${{ github.sha }}
+          docker push ${{ inputs.registry }}/${{ inputs.image_name }}:latest
+
+  notify:
+    needs: build
+    if: always()
+    uses: dev1sme/.github/.github/workflows/notify-telegram.yml@main
+    with:
+      status: ${{ needs.build.result }}
+      title: "BUILD"
+    secrets: inherit
