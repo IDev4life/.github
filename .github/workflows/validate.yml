@@ -214,7 +214,7 @@ jobs:
   notify:
     needs: validate
     if: always()
-    uses: dev1sme/.github/.github/workflows/notify-telegram.yml@main
+    uses: IDev4life/.github/.github/workflows/notify-telegram.yml@main
     with:
       status: ${{ needs.validate.result }}
       title: "VALIDATE"

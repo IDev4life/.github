@@ -6,7 +6,7 @@ on:
       image_name:
         required: true
         type: string
-        description: "Tên image, ví dụ: dev1sme/my-app"
+        description: "Tên image, ví dụ: IDev4life/my-app"
       dockerfile_path:
         required: false
         type: string
@@ -58,7 +58,7 @@ jobs:
   notify:
     needs: build
     if: always()
-    uses: dev1sme/.github/.github/workflows/notify-telegram.yml@main
+    uses: IDev4life/.github/.github/workflows/notify-telegram.yml@main
     with:
       status: ${{ needs.build.result }}
       title: "BUILD"
