@@ -1,6 +1,23 @@
 # IDev4life/.github
 
-Shared reusable GitHub Actions workflows for all IDev4life repositories.
+Shared reusable GitHub Actions workflows and organization-wide community
+health defaults for every IDev4life repository.
+
+## Versioning & pinning (callers)
+
+All usage examples below reference `@main` for readability, but **for any
+repository whose CI you care about, pin the workflow to a released tag** of
+`IDev4life/.github` (e.g. `@v1.0.0`). Using `@main` means every merge into this
+repo can change CI behaviour in downstream repos immediately, including
+potentially breaking ones.
+
+```yaml
+# Recommended for production
+uses: IDev4life/.github/.github/workflows/docker-build.yml@v1.0.0
+
+# Convenient for experiments / internal repos only
+uses: IDev4life/.github/.github/workflows/docker-build.yml@main
+```
 
 ## Workflows
 
@@ -88,9 +105,9 @@ Validates plugin marketplace schema, `plugin.json` files, `SKILL.md` frontmatter
 
 **Inputs:**
 
-| Input        | Required | Default | Description                                                                     |
-| ------------ | -------- | ------- | ------------------------------------------------------------------------------- |
-| `shared_ref` | ❌       | `main`  | Ref of `IDev4life/.github` to load scripts/config from (pin to a tag in prod).  |
+| Input        | Required | Default | Description                                                                    |
+| ------------ | -------- | ------- | ------------------------------------------------------------------------------ |
+| `shared_ref` | ❌       | `main`  | Ref of `IDev4life/.github` to load scripts/config from (pin to a tag in prod). |
 
 **Secrets:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
@@ -120,3 +137,16 @@ Sends Telegram notifications on PR opened / merged / closed / reopened. Copy thi
 ## Dependabot
 
 Actions dependencies are auto-updated weekly via Dependabot. Version pins use exact versions (e.g. `@v6.0.2`) so Dependabot can track and bump them.
+
+## Organization defaults
+
+This repository doubles as the special [`.github` repo](https://docs.github.com/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file)
+for the IDev4life organization. The following files apply as defaults to every
+repo in the org that does not ship its own copy:
+
+| File                                                                           | Scope                                            |
+| ------------------------------------------------------------------------------ | ------------------------------------------------ |
+| [`SECURITY.md`](SECURITY.md)                                                   | How to report vulnerabilities                    |
+| [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md)         | Default PR template                              |
+| [`.github/CODEOWNERS`](.github/CODEOWNERS)                                     | Owners of **this** repo (not inherited by org)   |
+| [`profile/README.md`](profile/README.md)                                       | Org profile landing page on github.com/IDev4life |

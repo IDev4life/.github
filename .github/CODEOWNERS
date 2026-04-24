@@ -1,0 +1,24 @@
+# CODEOWNERS for IDev4life/.github
+#
+# These owners are automatically requested for review on every PR
+# that touches this repo. This file lives at .github/CODEOWNERS and
+# applies to this repository only; it is NOT inherited by other
+# repos in the organization.
+#
+# Syntax: https://docs.github.com/articles/about-code-owners
+
+# Default owner for everything in this repo
+*                             @dev1sme
+
+# Reusable workflows — changes here can break CI for every repo in the org
+/.github/workflows/           @dev1sme
+
+# Shared validation scripts and lint config consumed by validate.yml
+/scripts/                     @dev1sme
+/config/                      @dev1sme
+
+# Org-wide community health defaults
+/SECURITY.md                  @dev1sme
+/CONTRIBUTING.md              @dev1sme
+/.github/PULL_REQUEST_TEMPLATE.md  @dev1sme
+/.github/ISSUE_TEMPLATE/      @dev1sme
