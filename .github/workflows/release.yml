@@ -22,6 +22,9 @@ jobs:
       - name: Run release-please
         uses: googleapis/release-please-action@v5.0.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Dùng PAT vì GITHUB_TOKEN mặc định không được phép tạo PR trên
+          # org free plan (setting Actions → Workflow permissions bị khoá).
+          # PAT cần quyền: Contents RW, Pull requests RW, Issues RW.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
