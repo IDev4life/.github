@@ -1,0 +1,65 @@
+name: Self CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    name: Lint workflows (actionlint + shellcheck)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Run actionlint
+        uses: docker://rhysd/actionlint:1.7.12
+        with:
+          args: -color
+
+  python:
+    name: Lint + compile Python scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Setup Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.13"
+
+      - name: Install tooling
+        run: python -m pip install --disable-pip-version-check "ruff==0.15.11" "pyyaml==6.0.3"
+
+      - name: Ruff
+        run: ruff check scripts/
+
+      - name: Compile check
+        run: python -m compileall -q scripts/
+
+  markdown:
+    name: Markdown lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+
+      - name: markdownlint-cli2
+        run: >
+          npx --yes markdownlint-cli2@0.22.1
+          --config config/markdownlint.jsonc
+          "**/*.md" "#node_modules"
