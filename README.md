@@ -12,28 +12,28 @@ Builds and (optionally) pushes a Docker image with GHA layer cache, standard OCI
 
 **Inputs:**
 
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `image_name` | ✅ | — | Image name, e.g. `IDev4life/my-app` |
-| `dockerfile_path` | ❌ | `./Dockerfile` | Path to Dockerfile |
-| `build_target` | ❌ | `production` | Docker build target stage |
-| `registry` | ❌ | `ghcr.io` | Container registry |
-| `context` | ❌ | `.` | Build context |
-| `platforms` | ❌ | `linux/amd64` | Comma-separated target platforms |
-| `build_args` | ❌ | `""` | Multi-line `KEY=VALUE` build args |
-| `push` | ❌ | `true` | Whether to push the image |
-| `provenance` | ❌ | `mode=max` | Provenance mode (`false` to disable) |
-| `sbom` | ❌ | `true` | Generate SBOM attestation |
+| Input             | Required | Default        | Description                          |
+| ----------------- | -------- | -------------- | ------------------------------------ |
+| `image_name`      | ✅       | —              | Image name, e.g. `IDev4life/my-app`  |
+| `dockerfile_path` | ❌       | `./Dockerfile` | Path to Dockerfile                   |
+| `build_target`    | ❌       | `production`   | Docker build target stage            |
+| `registry`        | ❌       | `ghcr.io`      | Container registry                   |
+| `context`         | ❌       | `.`            | Build context                        |
+| `platforms`       | ❌       | `linux/amd64`  | Comma-separated target platforms     |
+| `build_args`      | ❌       | `""`           | Multi-line `KEY=VALUE` build args    |
+| `push`            | ❌       | `true`         | Whether to push the image            |
+| `provenance`      | ❌       | `mode=max`     | Provenance mode (`false` to disable) |
+| `sbom`            | ❌       | `true`         | Generate SBOM attestation            |
 
 **Tag strategy** (via `docker/metadata-action`): long SHA, short SHA, branch name, PR ref, semver (on tag push), and `latest` **only on default branch**.
 
 **Secrets:**
 
-| Secret | Required | Notes |
-|--------|----------|-------|
-| `REGISTRY_TOKEN` | ❌ | Optional for `ghcr.io` (falls back to `GITHUB_TOKEN`). Required for other registries. |
-| `TELEGRAM_BOT_TOKEN` | ✅ | Used by the notify job |
-| `TELEGRAM_CHAT_ID` | ✅ | Used by the notify job |
+| Secret               | Required | Notes                                                                                 |
+| -------------------- | -------- | ------------------------------------------------------------------------------------- |
+| `REGISTRY_TOKEN`     | ❌       | Optional for `ghcr.io` (falls back to `GITHUB_TOKEN`). Required for other registries. |
+| `TELEGRAM_BOT_TOKEN` | ✅       | Used by the notify job                                                                |
+| `TELEGRAM_CHAT_ID`   | ✅       | Used by the notify job                                                                |
 
 **Permissions required in the caller:** `contents: read`, `packages: write`, `id-token: write`, `attestations: write`.
 
@@ -58,10 +58,10 @@ Sends a Telegram message with CI/CD status (success / failure / cancelled).
 
 **Inputs:**
 
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `status` | ✅ | — | `success` \| `failure` \| `cancelled` |
-| `title` | ❌ | `CI/CD` | Label shown in the message |
+| Input    | Required | Default | Description                           |
+| -------- | -------- | ------- | ------------------------------------- |
+| `status` | ✅       | —       | `success` \| `failure` \| `cancelled` |
+| `title`  | ❌       | `CI/CD` | Label shown in the message            |
 
 **Secrets:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
@@ -82,11 +82,19 @@ notify:
 
 ### `validate.yml` — Reusable Validate
 
-Validates plugin marketplace schema, `plugin.json` files, `SKILL.md` frontmatter, README links, and runs markdownlint.
+Validates plugin marketplace schema, `plugin.json` files, `SKILL.md` frontmatter (using PyYAML), README links, skill `references/*.md` links, and runs `markdownlint-cli2`. All validation logic lives in `scripts/` in this repo and is checked out at runtime, so caller repos don't need to ship anything beyond the workflow call itself.
 
 **Trigger:** `workflow_call`
 
+**Inputs:**
+
+| Input        | Required | Default | Description                                                                     |
+| ------------ | -------- | ------- | ------------------------------------------------------------------------------- |
+| `shared_ref` | ❌       | `main`  | Ref of `IDev4life/.github` to load scripts/config from (pin to a tag in prod).  |
+
 **Secrets:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+
+**Requires:** `IDev4life/.github` must be accessible by the caller's `GITHUB_TOKEN` (public, or internal within the same org).
 
 **Usage:**
 

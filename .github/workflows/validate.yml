@@ -2,6 +2,15 @@ name: Reusable Validate
 
 on:
   workflow_call:
+    inputs:
+      shared_ref:
+        required: false
+        type: string
+        default: "main"
+        description: >
+          Ref (branch/tag/SHA) of IDev4life/.github to load shared validate
+          scripts and markdownlint config from. Defaults to 'main'; pin to a
+          tag for reproducible builds.
     secrets:
       TELEGRAM_BOT_TOKEN:
         required: true
@@ -14,199 +23,53 @@ jobs:
     permissions:
       contents: read
     concurrency:
-      group: validate-${{ github.ref }}
+      group: validate-${{ github.workflow }}-${{ github.event.repository.full_name }}-${{ github.ref }}
       cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v6.0.2
+      - name: Checkout caller repo
+        uses: actions/checkout@v6.0.2
 
-      - name: Validate marketplace.json schema
-        run: |
-          python3 - <<'PY'
-          import json, sys
-          from pathlib import Path
+      - name: Checkout shared validate scripts
+        uses: actions/checkout@v6.0.2
+        with:
+          repository: IDev4life/.github
+          ref: ${{ inputs.shared_ref }}
+          path: _shared
+          persist-credentials: false
 
-          mp = json.loads(Path(".claude-plugin/marketplace.json").read_text())
-          for key in ("name", "owner", "plugins"):
-              if key not in mp:
-                  print(f"marketplace.json missing key: {key}")
-                  sys.exit(1)
-          if not isinstance(mp["owner"], dict) or "name" not in mp["owner"]:
-              print("marketplace.json: 'owner' must be an object with 'name'")
-              sys.exit(1)
-          allowed_owner = {"name", "email"}
-          extra = set(mp["owner"]) - allowed_owner
-          if extra:
-              print(f"marketplace.json: 'owner' has unexpected fields: {extra} (allowed: {allowed_owner})")
-              sys.exit(1)
-          if not isinstance(mp["plugins"], list) or not mp["plugins"]:
-              print("marketplace.json: 'plugins' must be a non-empty list")
-              sys.exit(1)
-          seen = set()
-          for p in mp["plugins"]:
-              for key in ("name", "source"):
-                  if key not in p:
-                      print(f"marketplace plugin entry missing: {key}")
-                      sys.exit(1)
-              if p["name"] in seen:
-                  print(f"duplicate plugin name: {p['name']}")
-                  sys.exit(1)
-              seen.add(p["name"])
-              src = p["source"]
-              if isinstance(src, str):
-                  if not src.startswith("./"):
-                      print(f"plugin {p['name']}: string 'source' must start with './', got {src!r}")
-                      sys.exit(1)
-                  plugin_dir = Path(src)
-                  if not plugin_dir.is_dir():
-                      print(f"plugin {p['name']}: source path {src!r} does not exist")
-                      sys.exit(1)
-                  pj = plugin_dir / ".claude-plugin" / "plugin.json"
-                  if not pj.exists():
-                      print(f"plugin {p['name']}: {pj} missing")
-                      sys.exit(1)
-              elif isinstance(src, dict):
-                  if "source" not in src:
-                      print(f"plugin {p['name']}: object 'source' must have inner 'source' discriminator")
-                      sys.exit(1)
-                  if src["source"] not in {"github", "url", "git-subdir", "npm"}:
-                      print(f"plugin {p['name']}: unknown source type {src['source']!r}")
-                      sys.exit(1)
-              else:
-                  print(f"plugin {p['name']}: 'source' must be string or object")
-                  sys.exit(1)
-              if "category" in p and not isinstance(p["category"], str):
-                  print(f"plugin {p['name']}: 'category' must be a string")
-                  sys.exit(1)
-          print(f"OK marketplace.json ({len(mp['plugins'])} plugin(s))")
-          PY
+      - name: Setup Python
+        uses: actions/setup-python@v6.2.0
+        with:
+          python-version: "3.13"
 
-      - name: Validate every plugin.json in the monorepo
-        run: |
-          python3 - <<'PY'
-          import json, sys
-          from pathlib import Path
+      - name: Install Python deps
+        run: python -m pip install --disable-pip-version-check "pyyaml==6.0.3"
 
-          bad = 0
-          for pj in Path(".").glob("plugins/*/.claude-plugin/plugin.json"):
-              meta = json.loads(pj.read_text())
-              for key in ("name", "version", "description"):
-                  if key not in meta:
-                      print(f"FAIL {pj}: missing {key}")
-                      bad += 1
-              if ":" in meta.get("name", ""):
-                  print(f"FAIL {pj}: name must not contain ':'")
-                  bad += 1
-              if not isinstance(meta.get("author"), dict) or "name" not in meta["author"]:
-                  print(f"FAIL {pj}: 'author' must be an object with 'name'")
-                  bad += 1
-              print(f"OK  {pj} name={meta.get('name')} v={meta.get('version')}")
-          if bad:
-              sys.exit(1)
-          PY
+      - name: Validate marketplace.json
+        env:
+          PYTHONPATH: _shared/scripts
+        run: python _shared/scripts/validate_marketplace.py
 
-      - name: Validate SKILL.md and command frontmatter
-        run: |
-          python3 - <<'PY'
-          import re, sys
-          from pathlib import Path
+      - name: Validate plugin.json files
+        env:
+          PYTHONPATH: _shared/scripts
+        run: python _shared/scripts/validate_plugin_json.py
 
-          FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
-          skill_files = list(Path(".").glob("plugins/*/skills/*/SKILL.md"))
-          command_files = list(Path(".").glob("plugins/*/commands/*.md"))
+      - name: Validate SKILL.md / command frontmatter
+        env:
+          PYTHONPATH: _shared/scripts
+        run: python _shared/scripts/validate_frontmatter.py
 
-          if not skill_files:
-              print("No SKILL.md files found")
-              sys.exit(1)
+      - name: Validate SKILL references
+        env:
+          PYTHONPATH: _shared/scripts
+        run: python _shared/scripts/validate_skill_references.py
 
-          failed = False
-
-          def parse_frontmatter(text, path):
-              m = FRONTMATTER_RE.match(text)
-              if not m:
-                  print(f"FAIL {path}: missing frontmatter block")
-                  return None
-              body = m.group(1)
-              fields = {}
-              for line in body.splitlines():
-                  if ":" in line and not line.startswith(" "):
-                      k, _, v = line.partition(":")
-                      fields[k.strip()] = v.strip()
-              return fields
-
-          for f in skill_files:
-              fm = parse_frontmatter(f.read_text(), f)
-              if fm is None:
-                  failed = True
-                  continue
-              for key in ("name", "description"):
-                  if key not in fm:
-                      print(f"FAIL {f}: missing '{key}'")
-                      failed = True
-              if "name" in fm and ":" in fm["name"]:
-                  print(f"FAIL {f}: skill name '{fm['name']}' must not contain ':'")
-                  failed = True
-              print(f"OK  {f}")
-
-          for f in command_files:
-              fm = parse_frontmatter(f.read_text(), f)
-              if fm is None:
-                  failed = True
-                  continue
-              if "description" not in fm or not fm["description"]:
-                  print(f"FAIL {f}: missing 'description'")
-                  failed = True
-              print(f"OK  {f}")
-
-          if failed:
-              sys.exit(1)
-          PY
-
-      - name: Verify SKILL.md references/links resolve
-        run: |
-          python3 - <<'PY'
-          import re, sys
-          from pathlib import Path
-
-          ref_re = re.compile(r"`?references/([A-Za-z0-9_\-./]+\.md)`?")
-          failed = False
-          scanned = 0
-          for skill in Path(".").glob("plugins/*/skills/*/SKILL.md"):
-              text = skill.read_text()
-              skill_dir = skill.parent
-              for match in set(ref_re.findall(text)):
-                  target = skill_dir / "references" / match
-                  if not target.exists():
-                      print(f"FAIL {skill}: references/{match} does not exist")
-                      failed = True
-                  else:
-                      scanned += 1
-          print(f"OK verified {scanned} references/*.md link(s)")
-          if failed:
-              sys.exit(1)
-          PY
-
-      - name: Check README links
-        run: |
-          python3 - <<'PY'
-          import re, sys
-          from pathlib import Path
-
-          readme = Path("README.md").read_text()
-          link_re = re.compile(r"\]\(([^)#]+)\)")
-          bad = []
-          for target in link_re.findall(readme):
-              if target.startswith(("http://", "https://", "mailto:", "#")):
-                  continue
-              if not Path(target).exists():
-                  bad.append(target)
-          if bad:
-              print("README references files that do not exist:")
-              for b in bad:
-                  print(f"  - {b}")
-              sys.exit(1)
-          print("OK all README relative links resolve")
-          PY
+      - name: Validate README links
+        env:
+          PYTHONPATH: _shared/scripts
+        run: python _shared/scripts/validate_readme_links.py
 
       - name: Setup Node for markdownlint
         uses: actions/setup-node@v6.4.0
@@ -214,7 +77,10 @@ jobs:
           node-version: "24"
 
       - name: Markdown lint
-        run: npx -y markdownlint-cli2 "**/*.md" "#node_modules"
+        run: >
+          npx --yes markdownlint-cli2@0.22.1
+          --config _shared/config/markdownlint.jsonc
+          "**/*.md" "#node_modules" "#_shared"
 
   notify:
     needs: validate
