@@ -35,249 +35,36 @@ Tags and `CHANGELOG.md` are produced automatically by
 
 ## Workflows
 
-### `docker-build.yml` — Reusable Docker Build
+Tài liệu chi tiết cho từng workflow nằm trong thư mục [`docs/`](docs/README.md). Tóm tắt:
 
-Builds and (optionally) pushes a Docker image with GHA layer cache, standard OCI labels/tags via `docker/metadata-action`, and provenance + SBOM attestations.
+### CI / Build
 
-**Trigger:** `workflow_call`, `workflow_dispatch`
+| Workflow             | Mô tả                                                            | Tài liệu                                                             |
+| -------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `docker-build.yml`   | Build & push Docker image (OCI labels, cache, provenance, SBOM)  | [docs/workflows/docker-build.md](docs/workflows/docker-build.md)     |
+| `java-spring-ci.yml` | CI Java / Spring (Maven hoặc Gradle) + JUnit annotation + JaCoCo | [docs/workflows/java-spring-ci.md](docs/workflows/java-spring-ci.md) |
+| `node-ci.yml`        | CI Node / TS (npm / pnpm / yarn) + JUnit annotation + Codecov    | [docs/workflows/node-ci.md](docs/workflows/node-ci.md)               |
+| `validate.yml`       | Validate plugin schema / `SKILL.md` / links / markdownlint       | [docs/workflows/validate.md](docs/workflows/validate.md)             |
 
-**Inputs:**
+### Security
 
-| Input             | Required | Default        | Description                          |
-| ----------------- | -------- | -------------- | ------------------------------------ |
-| `image_name`      | ✅       | —              | Image name, e.g. `IDev4life/my-app`  |
-| `dockerfile_path` | ❌       | `./Dockerfile` | Path to Dockerfile                   |
-| `build_target`    | ❌       | `""`           | Build target stage (empty = final)   |
-| `registry`        | ❌       | `ghcr.io`      | Container registry                   |
-| `context`         | ❌       | `.`            | Build context                        |
-| `platforms`       | ❌       | `linux/amd64`  | Comma-separated target platforms     |
-| `build_args`      | ❌       | `""`           | Multi-line `KEY=VALUE` build args    |
-| `push`            | ❌       | `true`         | Whether to push the image            |
-| `provenance`      | ❌       | `mode=max`     | Provenance mode (`false` to disable) |
-| `sbom`            | ❌       | `true`         | Generate SBOM attestation            |
+| Workflow         | Mô tả                                  | Tài liệu                                                     |
+| ---------------- | -------------------------------------- | ------------------------------------------------------------ |
+| `trivy-scan.yml` | Quét CVE container image, upload SARIF | [docs/workflows/trivy-scan.md](docs/workflows/trivy-scan.md) |
+| `codeql.yml`     | CodeQL analysis đa ngôn ngữ            | [docs/workflows/codeql.md](docs/workflows/codeql.md)         |
 
-**Tag strategy** (via `docker/metadata-action`): long SHA, short SHA, branch name, PR ref, semver (on tag push), and `latest` **only on default branch**.
+### Notifications
 
-**Secrets:**
+| Workflow              | Mô tả                                               | Tài liệu                                                               |
+| --------------------- | --------------------------------------------------- | ---------------------------------------------------------------------- |
+| `notify-telegram.yml` | Reusable — báo kết quả CI/CD qua Telegram           | [docs/workflows/notify-telegram.md](docs/workflows/notify-telegram.md) |
+| `notify-pr.yml`       | Standalone — báo PR open/merged/closed qua Telegram | [docs/workflows/notify-pr.md](docs/workflows/notify-pr.md)             |
 
-| Secret               | Required | Notes                                                                                 |
-| -------------------- | -------- | ------------------------------------------------------------------------------------- |
-| `REGISTRY_TOKEN`     | ❌       | Optional for `ghcr.io` (falls back to `GITHUB_TOKEN`). Required for other registries. |
-| `TELEGRAM_BOT_TOKEN` | ✅       | Used by the notify job                                                                |
-| `TELEGRAM_CHAT_ID`   | ✅       | Used by the notify job                                                                |
+### Org-local
 
-**Permissions required in the caller:** `contents: read`, `packages: write`, `id-token: write`, `attestations: write`.
-
-**Usage:**
-
-```yaml
-jobs:
-  build:
-    uses: IDev4life/.github/.github/workflows/docker-build.yml@main
-    with:
-      image_name: IDev4life/my-app
-    secrets: inherit
-```
-
----
-
-### `notify-telegram.yml` — Reusable Telegram Notify
-
-Sends a Telegram message with CI/CD status (success / failure / cancelled).
-
-**Trigger:** `workflow_call`
-
-**Inputs:**
-
-| Input    | Required | Default | Description                           |
-| -------- | -------- | ------- | ------------------------------------- |
-| `status` | ✅       | —       | `success` \| `failure` \| `cancelled` |
-| `title`  | ❌       | `CI/CD` | Label shown in the message            |
-
-**Secrets:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
-
-**Usage:**
-
-```yaml
-notify:
-  needs: build
-  if: always()
-  uses: IDev4life/.github/.github/workflows/notify-telegram.yml@main
-  with:
-    status: ${{ needs.build.result }}
-    title: "BUILD"
-  secrets: inherit
-```
-
----
-
-### `validate.yml` — Reusable Validate
-
-Validates plugin marketplace schema, `plugin.json` files, `SKILL.md` frontmatter (using PyYAML), README links, skill `references/*.md` links, and runs `markdownlint-cli2`. All validation logic lives in `scripts/` in this repo and is checked out at runtime, so caller repos don't need to ship anything beyond the workflow call itself.
-
-**Trigger:** `workflow_call`
-
-**Inputs:**
-
-| Input        | Required | Default | Description                                                                    |
-| ------------ | -------- | ------- | ------------------------------------------------------------------------------ |
-| `shared_ref` | ❌       | `main`  | Ref of `IDev4life/.github` to load scripts/config from (pin to a tag in prod). |
-
-**Secrets:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
-
-**Requires:** `IDev4life/.github` must be accessible by the caller's `GITHUB_TOKEN` (public, or internal within the same org).
-
-**Usage:**
-
-```yaml
-jobs:
-  validate:
-    uses: IDev4life/.github/.github/workflows/validate.yml@main
-    secrets: inherit
-```
-
----
-
-### `notify-pr.yml` — PR Telegram Notifications
-
-Sends Telegram notifications on PR opened / merged / closed / reopened. Copy this workflow into any repository.
-
-**Trigger:** `pull_request` (`opened`, `closed`, `reopened`)
-
-**Secrets required in the target repo:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
-
----
-
-### `java-spring-ci.yml` — Reusable Java / Spring CI
-
-Runs Maven or Gradle tests with JUnit annotations on the PR diff and optional JaCoCo coverage uploaded to Codecov.
-
-**Trigger:** `workflow_call`
-
-| Input               | Required | Default   | Description                                         |
-| ------------------- | -------- | --------- | --------------------------------------------------- |
-| `java_version`      | ❌       | `21`      | Java major version                                  |
-| `java_distribution` | ❌       | `temurin` | `temurin` / `corretto` / `zulu` / ...               |
-| `build_tool`        | ❌       | `maven`   | `maven` or `gradle`                                 |
-| `working_directory` | ❌       | `.`       | For monorepos                                       |
-| `maven_args`        | ❌       | `-B -ntp` | Appended to `./mvnw verify`                         |
-| `gradle_args`       | ❌       | `""`      | Appended to `./gradlew check`                       |
-| `upload_coverage`   | ❌       | `true`    | Upload JaCoCo XML to Codecov if `CODECOV_TOKEN` set |
-
-**Secrets:** `CODECOV_TOKEN` (optional).
-
-**Usage:**
-
-```yaml
-jobs:
-  test:
-    uses: IDev4life/.github/.github/workflows/java-spring-ci.yml@main
-    with:
-      java_version: "21"
-      build_tool: "maven"
-    secrets: inherit
-```
-
-Pair with `docker-build.yml` to build the image only after tests pass:
-
-```yaml
-image:
-  needs: test
-  uses: IDev4life/.github/.github/workflows/docker-build.yml@main
-  with:
-    image_name: IDev4life/my-spring-app
-  secrets: inherit
-```
-
----
-
-### `node-ci.yml` — Reusable Node CI
-
-Installs, lints, tests, builds a Node.js project. Supports `npm`, `pnpm`, `yarn`. Publishes JUnit annotations and Codecov coverage.
-
-**Trigger:** `workflow_call`
-
-| Input             | Required | Default     | Description              |
-| ----------------- | -------- | ----------- | ------------------------ |
-| `node_version`    | ❌       | `24`        | Node.js major version    |
-| `package_manager` | ❌       | `npm`       | `npm` / `pnpm` / `yarn`  |
-| `pnpm_version`    | ❌       | `10`        | Only used for `pnpm`     |
-| `install_command` | ❌       | _infer_     | Override install command |
-| `lint_command`    | ❌       | `run lint`  | Empty string to skip     |
-| `test_command`    | ❌       | `run test`  | Empty string to skip     |
-| `build_command`   | ❌       | `run build` | Empty string to skip     |
-| `upload_coverage` | ❌       | `true`      | Upload to Codecov        |
-
-**Secrets:** `CODECOV_TOKEN`, `NPM_TOKEN` (all optional).
-
----
-
-### `trivy-scan.yml` — Reusable Container Scan
-
-Scans an already-built container image with Trivy, fails the build on configurable severity, and uploads SARIF to GitHub Code Scanning.
-
-**Trigger:** `workflow_call`
-
-| Input            | Required | Default         | Description                        |
-| ---------------- | -------- | --------------- | ---------------------------------- |
-| `image_ref`      | ✅       | —               | Full image ref to scan             |
-| `severity`       | ❌       | `CRITICAL,HIGH` | Comma-separated severities to fail |
-| `ignore_unfixed` | ❌       | `true`          | Skip vulns without a fix available |
-| `upload_sarif`   | ❌       | `true`          | Upload to GitHub Code Scanning     |
-
-**Permissions required in the caller:** `contents: read`, `security-events: write`, `packages: read`.
-
-**Usage (chained after docker-build):**
-
-```yaml
-build:
-  uses: IDev4life/.github/.github/workflows/docker-build.yml@main
-  with: { image_name: IDev4life/my-app }
-  secrets: inherit
-scan:
-  needs: build
-  uses: IDev4life/.github/.github/workflows/trivy-scan.yml@main
-  with:
-    image_ref: ghcr.io/IDev4life/my-app:${{ github.sha }}
-  secrets: inherit
-```
-
----
-
-### `codeql.yml` — Reusable CodeQL Analysis
-
-GitHub advanced security code scanning for multiple languages in parallel.
-
-**Trigger:** `workflow_call`
-
-| Input        | Required | Default                                  | Description                          |
-| ------------ | -------- | ---------------------------------------- | ------------------------------------ |
-| `languages`  | ✅       | —                                        | JSON array, e.g. `'["java-kotlin"]'` |
-| `build_mode` | ❌       | `none`                                   | `none` / `autobuild` / `manual`      |
-| `queries`    | ❌       | `security-extended,security-and-quality` | CodeQL query suites                  |
-
-**Permissions required in the caller:** `contents: read`, `security-events: write`, `actions: read`, `packages: read`.
-
-**Usage:**
-
-```yaml
-on:
-  push: { branches: [main] }
-  pull_request:
-  schedule: [{ cron: "0 3 * * 1" }]
-jobs:
-  codeql:
-    uses: IDev4life/.github/.github/workflows/codeql.yml@main
-    with:
-      languages: '["java-kotlin"]'
-      build_mode: autobuild
-```
-
----
-
-### `stale.yml` — Org-local Stale Bot
-
-Runs daily in **this** repo against its own issues and PRs. Not reusable; copy into other repos if you want the same behavior there.
+| Workflow    | Mô tả                             | Tài liệu                                           |
+| ----------- | --------------------------------- | -------------------------------------------------- |
+| `stale.yml` | Bot đóng issue/PR không hoạt động | [docs/workflows/stale.md](docs/workflows/stale.md) |
 
 ---
 
