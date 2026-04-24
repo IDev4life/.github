@@ -47,7 +47,7 @@ Builds and (optionally) pushes a Docker image with GHA layer cache, standard OCI
 | ----------------- | -------- | -------------- | ------------------------------------ |
 | `image_name`      | ✅       | —              | Image name, e.g. `IDev4life/my-app`  |
 | `dockerfile_path` | ❌       | `./Dockerfile` | Path to Dockerfile                   |
-| `build_target`    | ❌       | `production`   | Docker build target stage            |
+| `build_target`    | ❌       | `""`           | Build target stage (empty = final)   |
 | `registry`        | ❌       | `ghcr.io`      | Container registry                   |
 | `context`         | ❌       | `.`            | Build context                        |
 | `platforms`       | ❌       | `linux/amd64`  | Comma-separated target platforms     |
@@ -148,6 +148,139 @@ Sends Telegram notifications on PR opened / merged / closed / reopened. Copy thi
 
 ---
 
+### `java-spring-ci.yml` — Reusable Java / Spring CI
+
+Runs Maven or Gradle tests with JUnit annotations on the PR diff and optional JaCoCo coverage uploaded to Codecov.
+
+**Trigger:** `workflow_call`
+
+| Input               | Required | Default   | Description                                         |
+| ------------------- | -------- | --------- | --------------------------------------------------- |
+| `java_version`      | ❌       | `21`      | Java major version                                  |
+| `java_distribution` | ❌       | `temurin` | `temurin` / `corretto` / `zulu` / ...               |
+| `build_tool`        | ❌       | `maven`   | `maven` or `gradle`                                 |
+| `working_directory` | ❌       | `.`       | For monorepos                                       |
+| `maven_args`        | ❌       | `-B -ntp` | Appended to `./mvnw verify`                         |
+| `gradle_args`       | ❌       | `""`      | Appended to `./gradlew check`                       |
+| `upload_coverage`   | ❌       | `true`    | Upload JaCoCo XML to Codecov if `CODECOV_TOKEN` set |
+
+**Secrets:** `CODECOV_TOKEN` (optional).
+
+**Usage:**
+
+```yaml
+jobs:
+  test:
+    uses: IDev4life/.github/.github/workflows/java-spring-ci.yml@main
+    with:
+      java_version: "21"
+      build_tool: "maven"
+    secrets: inherit
+```
+
+Pair with `docker-build.yml` to build the image only after tests pass:
+
+```yaml
+image:
+  needs: test
+  uses: IDev4life/.github/.github/workflows/docker-build.yml@main
+  with:
+    image_name: IDev4life/my-spring-app
+  secrets: inherit
+```
+
+---
+
+### `node-ci.yml` — Reusable Node CI
+
+Installs, lints, tests, builds a Node.js project. Supports `npm`, `pnpm`, `yarn`. Publishes JUnit annotations and Codecov coverage.
+
+**Trigger:** `workflow_call`
+
+| Input             | Required | Default     | Description              |
+| ----------------- | -------- | ----------- | ------------------------ |
+| `node_version`    | ❌       | `24`        | Node.js major version    |
+| `package_manager` | ❌       | `npm`       | `npm` / `pnpm` / `yarn`  |
+| `pnpm_version`    | ❌       | `10`        | Only used for `pnpm`     |
+| `install_command` | ❌       | _infer_     | Override install command |
+| `lint_command`    | ❌       | `run lint`  | Empty string to skip     |
+| `test_command`    | ❌       | `run test`  | Empty string to skip     |
+| `build_command`   | ❌       | `run build` | Empty string to skip     |
+| `upload_coverage` | ❌       | `true`      | Upload to Codecov        |
+
+**Secrets:** `CODECOV_TOKEN`, `NPM_TOKEN` (all optional).
+
+---
+
+### `trivy-scan.yml` — Reusable Container Scan
+
+Scans an already-built container image with Trivy, fails the build on configurable severity, and uploads SARIF to GitHub Code Scanning.
+
+**Trigger:** `workflow_call`
+
+| Input            | Required | Default         | Description                        |
+| ---------------- | -------- | --------------- | ---------------------------------- |
+| `image_ref`      | ✅       | —               | Full image ref to scan             |
+| `severity`       | ❌       | `CRITICAL,HIGH` | Comma-separated severities to fail |
+| `ignore_unfixed` | ❌       | `true`          | Skip vulns without a fix available |
+| `upload_sarif`   | ❌       | `true`          | Upload to GitHub Code Scanning     |
+
+**Permissions required in the caller:** `contents: read`, `security-events: write`, `packages: read`.
+
+**Usage (chained after docker-build):**
+
+```yaml
+build:
+  uses: IDev4life/.github/.github/workflows/docker-build.yml@main
+  with: { image_name: IDev4life/my-app }
+  secrets: inherit
+scan:
+  needs: build
+  uses: IDev4life/.github/.github/workflows/trivy-scan.yml@main
+  with:
+    image_ref: ghcr.io/IDev4life/my-app:${{ github.sha }}
+  secrets: inherit
+```
+
+---
+
+### `codeql.yml` — Reusable CodeQL Analysis
+
+GitHub advanced security code scanning for multiple languages in parallel.
+
+**Trigger:** `workflow_call`
+
+| Input        | Required | Default                                  | Description                          |
+| ------------ | -------- | ---------------------------------------- | ------------------------------------ |
+| `languages`  | ✅       | —                                        | JSON array, e.g. `'["java-kotlin"]'` |
+| `build_mode` | ❌       | `none`                                   | `none` / `autobuild` / `manual`      |
+| `queries`    | ❌       | `security-extended,security-and-quality` | CodeQL query suites                  |
+
+**Permissions required in the caller:** `contents: read`, `security-events: write`, `actions: read`, `packages: read`.
+
+**Usage:**
+
+```yaml
+on:
+  push: { branches: [main] }
+  pull_request:
+  schedule: [{ cron: "0 3 * * 1" }]
+jobs:
+  codeql:
+    uses: IDev4life/.github/.github/workflows/codeql.yml@main
+    with:
+      languages: '["java-kotlin"]'
+      build_mode: autobuild
+```
+
+---
+
+### `stale.yml` — Org-local Stale Bot
+
+Runs daily in **this** repo against its own issues and PRs. Not reusable; copy into other repos if you want the same behavior there.
+
+---
+
 ## Dependabot
 
 Actions dependencies are auto-updated weekly via Dependabot. Version pins use exact versions (e.g. `@v6.0.2`) so Dependabot can track and bump them.
@@ -161,6 +294,8 @@ repo in the org that does not ship its own copy:
 | File                                                                   | Scope                                            |
 | ---------------------------------------------------------------------- | ------------------------------------------------ |
 | [`SECURITY.md`](SECURITY.md)                                           | How to report vulnerabilities                    |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md)                                   | Default contributing guide                       |
 | [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) | Default PR template                              |
+| [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE)                    | Default issue templates (bug / feature)          |
 | [`.github/CODEOWNERS`](.github/CODEOWNERS)                             | Owners of **this** repo (not inherited by org)   |
 | [`profile/README.md`](profile/README.md)                               | Org profile landing page on github.com/IDev4life |

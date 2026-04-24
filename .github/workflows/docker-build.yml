@@ -14,7 +14,8 @@ on:
       build_target:
         required: false
         type: string
-        default: "production"
+        default: ""
+        description: "Docker build target stage (empty = final stage)"
       registry:
         required: false
         type: string
@@ -71,7 +72,7 @@ on:
       build_target:
         required: false
         type: string
-        default: "production"
+        default: ""
       registry:
         required: false
         type: string
@@ -147,6 +148,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v7.1.0
         with:
           context: ${{ inputs.context }}
@@ -161,6 +163,14 @@ jobs:
           sbom: ${{ inputs.sbom }}
           cache-from: type=gha,scope=${{ inputs.image_name }}
           cache-to: type=gha,mode=max,scope=${{ inputs.image_name }}
+
+      - name: Attest build provenance
+        if: inputs.push && inputs.provenance != 'false' && steps.build.outputs.digest != ''
+        uses: actions/attest-build-provenance@v4.1.0
+        with:
+          subject-name: ${{ inputs.registry }}/${{ inputs.image_name }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
 
   notify:
     needs: build
