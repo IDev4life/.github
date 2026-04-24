@@ -1,0 +1,67 @@
+name: Reusable CodeQL
+
+on:
+  workflow_call:
+    inputs:
+      languages:
+        required: true
+        type: string
+        description: >
+          JSON array of CodeQL languages to analyse, e.g.
+          '["java-kotlin","javascript-typescript"]'. Valid values include
+          java-kotlin, javascript-typescript, python, go, csharp, cpp,
+          ruby, swift, actions.
+      build_mode:
+        required: false
+        type: string
+        default: "none"
+        description: >
+          Build mode per language: "none" (analysis only), "autobuild", or
+          "manual". Use "autobuild" for Java/Kotlin/C#/Go/C++.
+      queries:
+        required: false
+        type: string
+        default: "security-extended,security-and-quality"
+        description: "CodeQL query suites"
+      runs_on:
+        required: false
+        type: string
+        default: "ubuntu-latest"
+
+jobs:
+  analyze:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ${{ inputs.runs_on }}
+    timeout-minutes: 360
+    permissions:
+      contents: read
+      security-events: write
+      packages: read
+      actions: read
+    concurrency:
+      group: codeql-${{ github.workflow }}-${{ github.event.repository.full_name }}-${{ github.ref }}-${{ matrix.language }}
+      cancel-in-progress: true
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJSON(inputs.languages) }}
+
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4.35.2
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ inputs.build_mode }}
+          queries: ${{ inputs.queries }}
+
+      - name: Autobuild
+        if: inputs.build_mode == 'autobuild'
+        uses: github/codeql-action/autobuild@v4.35.2
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4.35.2
+        with:
+          category: "/language:${{ matrix.language }}"

@@ -1,0 +1,104 @@
+name: Reusable Trivy Image Scan
+
+on:
+  workflow_call:
+    inputs:
+      image_ref:
+        required: true
+        type: string
+        description: "Full image reference to scan, e.g. ghcr.io/org/app:sha-abc123"
+      severity:
+        required: false
+        type: string
+        default: "CRITICAL,HIGH"
+        description: "Comma-separated severities that cause failure"
+      ignore_unfixed:
+        required: false
+        type: boolean
+        default: true
+      exit_code:
+        required: false
+        type: string
+        default: "1"
+        description: "Trivy exit code when vulns of listed severity are found"
+      upload_sarif:
+        required: false
+        type: boolean
+        default: true
+        description: "Upload SARIF to GitHub code scanning (requires security-events:write)"
+    secrets:
+      REGISTRY_TOKEN:
+        required: false
+        description: "Registry token if image is in a private registry"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write # needed for SARIF upload
+      packages: read
+    concurrency:
+      group: trivy-${{ github.workflow }}-${{ github.event.repository.full_name }}-${{ inputs.image_ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Detect registry
+        id: reg
+        env:
+          IMAGE: ${{ inputs.image_ref }}
+          TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          case "${IMAGE}" in
+            ghcr.io/*) registry=ghcr.io ;;
+            *)         registry="${IMAGE%%/*}" ;;
+          esac
+          echo "registry=${registry}" >>"$GITHUB_OUTPUT"
+          if [ -n "${TOKEN}" ]; then
+            echo "has_token=true" >>"$GITHUB_OUTPUT"
+          elif [ "${registry}" = "ghcr.io" ]; then
+            echo "has_token=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Registry login
+        if: steps.reg.outputs.has_token == 'true'
+        uses: docker/login-action@v4.1.0
+        with:
+          registry: ${{ steps.reg.outputs.registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.REGISTRY_TOKEN != '' && secrets.REGISTRY_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Run Trivy vulnerability scanner (fail build)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ inputs.image_ref }}
+          format: table
+          severity: ${{ inputs.severity }}
+          ignore-unfixed: ${{ inputs.ignore_unfixed }}
+          exit-code: ${{ inputs.exit_code }}
+          vuln-type: os,library
+
+      - name: Run Trivy (SARIF for code scanning)
+        if: always() && inputs.upload_sarif
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ inputs.image_ref }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: ${{ inputs.severity }}
+          ignore-unfixed: ${{ inputs.ignore_unfixed }}
+          exit-code: "0"
+          vuln-type: os,library
+
+      - name: Upload SARIF
+        if: always() && inputs.upload_sarif && hashFiles('trivy-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4.35.2
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
