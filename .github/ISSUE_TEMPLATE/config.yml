@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/IDev4life/.github/security/advisories/new
+    about: Report vulnerabilities privately. Do NOT open a public issue.

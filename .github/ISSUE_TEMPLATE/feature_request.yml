@@ -1,0 +1,41 @@
+name: Feature request
+description: Propose a new feature or improvement.
+title: "[Feat]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem or gap does this solve? Describe the pain first, not the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What do you want to see built? Include API / workflow input shape if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about and why they fall short.
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Single repo
+        - Organization-wide default
+        - Reusable workflow change
+    validations:
+      required: true
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
