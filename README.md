@@ -19,6 +19,20 @@ uses: IDev4life/.github/.github/workflows/docker-build.yml@v1.0.0
 uses: IDev4life/.github/.github/workflows/docker-build.yml@main
 ```
 
+### Releases
+
+Tags and `CHANGELOG.md` are produced automatically by
+[release-please](https://github.com/googleapis/release-please) driven by
+[Conventional Commits](https://www.conventionalcommits.org/):
+
+- Merging `feat:` commits to `main` → minor bump (or patch while `0.x`).
+- Merging `fix:` commits → patch bump.
+- `feat!:` / `BREAKING CHANGE:` footer → major bump.
+- release-please opens a "chore: release X.Y.Z" PR that aggregates the
+  pending changes. Merging that PR creates the git tag + GitHub Release.
+- To cut the first `v1.0.0` from `0.0.0`, include `Release-As: 1.0.0` in a
+  commit footer (or `BREAKING CHANGE:`) before merging.
+
 ## Workflows
 
 ### `docker-build.yml` — Reusable Docker Build
