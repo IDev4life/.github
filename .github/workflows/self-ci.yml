@@ -62,4 +62,4 @@ jobs:
         run: >
           npx --yes markdownlint-cli2@0.22.1
           --config config/markdownlint.jsonc
-          "**/*.md" "#node_modules"
+          "**/*.md" "#node_modules" "#CHANGELOG.md"

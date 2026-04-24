@@ -81,7 +81,7 @@ jobs:
         run: >
           npx --yes markdownlint-cli2@0.22.1
           --config _shared/config/markdownlint.jsonc
-          "**/*.md" "#node_modules" "#_shared"
+          "**/*.md" "#node_modules" "#_shared" "#CHANGELOG.md"
 
   notify:
     needs: validate
