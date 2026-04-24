@@ -19,13 +19,72 @@ on:
         required: false
         type: string
         default: "ghcr.io"
+      context:
+        required: false
+        type: string
+        default: "."
+        description: "Build context path"
+      platforms:
+        required: false
+        type: string
+        default: "linux/amd64"
+        description: "Comma-separated list of target platforms (e.g. linux/amd64,linux/arm64)"
+      build_args:
+        required: false
+        type: string
+        default: ""
+        description: "Multi-line string of KEY=VALUE build args passed to docker build"
+      push:
+        required: false
+        type: boolean
+        default: true
+        description: "Whether to push the built image to the registry"
+      provenance:
+        required: false
+        type: string
+        default: "mode=max"
+        description: "Provenance attestation mode (set to 'false' to disable)"
+      sbom:
+        required: false
+        type: boolean
+        default: true
+        description: "Whether to generate an SBOM attestation"
     secrets:
       REGISTRY_TOKEN:
-        required: true
+        required: false
+        description: "Registry token. Optional for ghcr.io (falls back to GITHUB_TOKEN)."
       TELEGRAM_BOT_TOKEN:
         required: true
       TELEGRAM_CHAT_ID:
         required: true
+
+  workflow_dispatch:
+    inputs:
+      image_name:
+        required: true
+        type: string
+        description: "Image name for manual test build"
+      dockerfile_path:
+        required: false
+        type: string
+        default: "./Dockerfile"
+      build_target:
+        required: false
+        type: string
+        default: "production"
+      registry:
+        required: false
+        type: string
+        default: "ghcr.io"
+      platforms:
+        required: false
+        type: string
+        default: "linux/amd64"
+      push:
+        required: false
+        type: boolean
+        default: false
+        description: "Disable push by default for manual runs"
 
 jobs:
   build:
@@ -33,12 +92,30 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
+      attestations: write
     concurrency:
-      group: docker-build-${{ github.ref }}
+      group: docker-build-${{ github.workflow }}-${{ github.event.repository.full_name }}-${{ github.ref }}
       cancel-in-progress: true
 
     steps:
       - uses: actions/checkout@v6.0.2
+
+      - name: Resolve registry credentials
+        id: creds
+        env:
+          REGISTRY: ${{ inputs.registry }}
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "${REGISTRY_TOKEN}" ]; then
+            echo "password_source=REGISTRY_TOKEN" >>"$GITHUB_OUTPUT"
+          elif [ "${REGISTRY}" = "ghcr.io" ]; then
+            echo "password_source=GITHUB_TOKEN" >>"$GITHUB_OUTPUT"
+          else
+            echo "::error::REGISTRY_TOKEN is required when registry is not ghcr.io (got '${REGISTRY}')"
+            exit 1
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.0.0
@@ -48,19 +125,37 @@ jobs:
         with:
           registry: ${{ inputs.registry }}
           username: ${{ github.actor }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
+          password: ${{ steps.creds.outputs.password_source == 'REGISTRY_TOKEN' && secrets.REGISTRY_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v6.0.0
+        with:
+          images: ${{ inputs.registry }}/${{ inputs.image_name }}
+          tags: |
+            type=sha,format=long
+            type=sha,prefix=,format=short
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v7.1.0
         with:
+          context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile_path }}
-          push: true
-          tags: |
-            ${{ inputs.registry }}/${{ inputs.image_name }}:${{ github.sha }}
-            ${{ inputs.registry }}/${{ inputs.image_name }}:latest
           target: ${{ inputs.build_target }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          platforms: ${{ inputs.platforms }}
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: ${{ inputs.build_args }}
+          provenance: ${{ inputs.provenance }}
+          sbom: ${{ inputs.sbom }}
+          cache-from: type=gha,scope=${{ inputs.image_name }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.image_name }}
 
   notify:
     needs: build

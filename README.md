@@ -6,9 +6,9 @@ Shared reusable GitHub Actions workflows for all IDev4life repositories.
 
 ### `docker-build.yml` — Reusable Docker Build
 
-Builds and pushes a Docker image to a container registry with GHA layer cache.
+Builds and (optionally) pushes a Docker image with GHA layer cache, standard OCI labels/tags via `docker/metadata-action`, and provenance + SBOM attestations.
 
-**Trigger:** `workflow_call`
+**Trigger:** `workflow_call`, `workflow_dispatch`
 
 **Inputs:**
 
@@ -18,8 +18,24 @@ Builds and pushes a Docker image to a container registry with GHA layer cache.
 | `dockerfile_path` | ❌ | `./Dockerfile` | Path to Dockerfile |
 | `build_target` | ❌ | `production` | Docker build target stage |
 | `registry` | ❌ | `ghcr.io` | Container registry |
+| `context` | ❌ | `.` | Build context |
+| `platforms` | ❌ | `linux/amd64` | Comma-separated target platforms |
+| `build_args` | ❌ | `""` | Multi-line `KEY=VALUE` build args |
+| `push` | ❌ | `true` | Whether to push the image |
+| `provenance` | ❌ | `mode=max` | Provenance mode (`false` to disable) |
+| `sbom` | ❌ | `true` | Generate SBOM attestation |
 
-**Secrets:** `REGISTRY_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+**Tag strategy** (via `docker/metadata-action`): long SHA, short SHA, branch name, PR ref, semver (on tag push), and `latest` **only on default branch**.
+
+**Secrets:**
+
+| Secret | Required | Notes |
+|--------|----------|-------|
+| `REGISTRY_TOKEN` | ❌ | Optional for `ghcr.io` (falls back to `GITHUB_TOKEN`). Required for other registries. |
+| `TELEGRAM_BOT_TOKEN` | ✅ | Used by the notify job |
+| `TELEGRAM_CHAT_ID` | ✅ | Used by the notify job |
+
+**Permissions required in the caller:** `contents: read`, `packages: write`, `id-token: write`, `attestations: write`.
 
 **Usage:**
 
