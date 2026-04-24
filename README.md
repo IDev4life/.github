@@ -144,9 +144,9 @@ This repository doubles as the special [`.github` repo](https://docs.github.com/
 for the IDev4life organization. The following files apply as defaults to every
 repo in the org that does not ship its own copy:
 
-| File                                                                           | Scope                                            |
-| ------------------------------------------------------------------------------ | ------------------------------------------------ |
-| [`SECURITY.md`](SECURITY.md)                                                   | How to report vulnerabilities                    |
-| [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md)         | Default PR template                              |
-| [`.github/CODEOWNERS`](.github/CODEOWNERS)                                     | Owners of **this** repo (not inherited by org)   |
-| [`profile/README.md`](profile/README.md)                                       | Org profile landing page on github.com/IDev4life |
+| File                                                                   | Scope                                            |
+| ---------------------------------------------------------------------- | ------------------------------------------------ |
+| [`SECURITY.md`](SECURITY.md)                                           | How to report vulnerabilities                    |
+| [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) | Default PR template                              |
+| [`.github/CODEOWNERS`](.github/CODEOWNERS)                             | Owners of **this** repo (not inherited by org)   |
+| [`profile/README.md`](profile/README.md)                               | Org profile landing page on github.com/IDev4life |

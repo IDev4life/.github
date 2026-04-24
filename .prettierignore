@@ -1,0 +1,9 @@
+# Files that must not be reformatted.
+# CODEOWNERS is plain text with a strict syntax:
+#   - a line starting with '*' means "all files"
+#   - Prettier treats '*' as a markdown list marker and rewrites it
+#     to '-', which silently breaks ownership rules.
+.github/CODEOWNERS
+
+# Don't reformat generated lockfiles
+package-lock.json
