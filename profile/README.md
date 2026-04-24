@@ -11,11 +11,11 @@
 
 #### 👤 Founder & Maintainer
 
-|            |                                         |
-| ---------- | --------------------------------------- |
-| **Name**   | Lê Tuấn Thông                           |
-| **GitHub** | [@dev1sme](https://github.com/dev1sme)  |
-| **Role**   | Founder & Lead Engineer                 |
+|            |                                        |
+| ---------- | -------------------------------------- |
+| **Name**   | Lê Tuấn Thông                          |
+| **GitHub** | [@dev1sme](https://github.com/dev1sme) |
+| **Role**   | Founder & Lead Engineer                |
 
 #### Connect with us
 
