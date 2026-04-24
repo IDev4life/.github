@@ -1,0 +1,133 @@
+name: Reusable Java Spring CI
+
+on:
+  workflow_call:
+    inputs:
+      java_version:
+        required: false
+        type: string
+        default: "21"
+        description: "Java major version (21 LTS, 17 LTS, etc.)"
+      java_distribution:
+        required: false
+        type: string
+        default: "temurin"
+        description: "Java distribution (temurin, corretto, zulu, etc.)"
+      build_tool:
+        required: false
+        type: string
+        default: "maven"
+        description: "maven or gradle"
+      working_directory:
+        required: false
+        type: string
+        default: "."
+        description: "Working directory (for monorepos)"
+      maven_args:
+        required: false
+        type: string
+        default: "-B -ntp"
+        description: "Extra Maven args appended to the verify command"
+      gradle_args:
+        required: false
+        type: string
+        default: ""
+        description: "Extra Gradle args appended to the check command"
+      upload_coverage:
+        required: false
+        type: boolean
+        default: true
+        description: "Upload JaCoCo coverage to Codecov if CODECOV_TOKEN is set"
+      runs_on:
+        required: false
+        type: string
+        default: "ubuntu-latest"
+    secrets:
+      CODECOV_TOKEN:
+        required: false
+        description: "Codecov token. Optional; uploads are skipped when absent."
+      TELEGRAM_BOT_TOKEN:
+        required: false
+      TELEGRAM_CHAT_ID:
+        required: false
+
+jobs:
+  test:
+    runs-on: ${{ inputs.runs_on }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      checks: write # for test-reporter / junit-report annotations
+      pull-requests: write # for coverage PR comments
+    concurrency:
+      group: java-spring-ci-${{ github.workflow }}-${{ github.event.repository.full_name }}-${{ github.ref }}
+      cancel-in-progress: true
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Setup Java
+        uses: actions/setup-java@v5.2.0
+        with:
+          distribution: ${{ inputs.java_distribution }}
+          java-version: ${{ inputs.java_version }}
+          cache: ${{ inputs.build_tool }}
+
+      # Maven path -----------------------------------------------------------
+      - name: Maven verify
+        if: inputs.build_tool == 'maven'
+        run: ./mvnw --fail-fast ${{ inputs.maven_args }} verify
+        shell: bash
+
+      # Gradle path ----------------------------------------------------------
+      - name: Gradle check
+        if: inputs.build_tool == 'gradle'
+        run: ./gradlew --no-daemon --continue check ${{ inputs.gradle_args }}
+        shell: bash
+
+      # Test reports ---------------------------------------------------------
+      - name: Publish JUnit test report
+        if: always()
+        uses: mikepenz/action-junit-report@v6.4.0
+        with:
+          report_paths: |
+            ${{ inputs.working_directory }}/**/target/surefire-reports/TEST-*.xml
+            ${{ inputs.working_directory }}/**/target/failsafe-reports/TEST-*.xml
+            ${{ inputs.working_directory }}/**/build/test-results/**/TEST-*.xml
+          check_name: "Java tests"
+          require_tests: true
+          fail_on_failure: true
+          detailed_summary: true
+          include_passed: false
+
+      # Coverage -------------------------------------------------------------
+      - name: Upload coverage to Codecov
+        if: always() && inputs.upload_coverage && env.CODECOV_TOKEN != ''
+        uses: codecov/codecov-action@v6.0.0
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          files: |
+            ${{ inputs.working_directory }}/**/target/site/jacoco/jacoco.xml
+            ${{ inputs.working_directory }}/**/build/reports/jacoco/test/jacocoTestReport.xml
+          flags: java
+
+      # Archive raw reports (always, for debugging) --------------------------
+      - name: Archive test reports
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: java-test-reports
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            ${{ inputs.working_directory }}/**/target/surefire-reports/
+            ${{ inputs.working_directory }}/**/target/failsafe-reports/
+            ${{ inputs.working_directory }}/**/target/site/jacoco/
+            ${{ inputs.working_directory }}/**/build/test-results/
+            ${{ inputs.working_directory }}/**/build/reports/

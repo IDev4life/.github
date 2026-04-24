@@ -1,0 +1,173 @@
+name: Reusable Node CI
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        required: false
+        type: string
+        default: "24"
+        description: "Node.js major version"
+      package_manager:
+        required: false
+        type: string
+        default: "npm"
+        description: "npm, pnpm, or yarn"
+      pnpm_version:
+        required: false
+        type: string
+        default: "10"
+        description: "pnpm major version (only used when package_manager=pnpm)"
+      install_command:
+        required: false
+        type: string
+        default: ""
+        description: "Override install command (defaults inferred from package_manager)"
+      lint_command:
+        required: false
+        type: string
+        default: "run lint"
+        description: "Lint script to run with the package manager (empty to skip)"
+      test_command:
+        required: false
+        type: string
+        default: "run test"
+        description: "Test script to run (empty to skip)"
+      build_command:
+        required: false
+        type: string
+        default: "run build"
+        description: "Build script to run (empty to skip)"
+      working_directory:
+        required: false
+        type: string
+        default: "."
+      coverage_paths:
+        required: false
+        type: string
+        default: "**/coverage/lcov.info,**/coverage/cobertura-coverage.xml"
+        description: "Comma-separated coverage files to upload to Codecov"
+      upload_coverage:
+        required: false
+        type: boolean
+        default: true
+      junit_report_paths:
+        required: false
+        type: string
+        default: "**/junit.xml,**/test-results/**/*.xml,**/reports/junit/*.xml"
+        description: "Glob(s) of JUnit XML produced by the test runner"
+      runs_on:
+        required: false
+        type: string
+        default: "ubuntu-latest"
+    secrets:
+      CODECOV_TOKEN:
+        required: false
+      NPM_TOKEN:
+        required: false
+        description: "Registry token for private deps (exposed as NODE_AUTH_TOKEN)"
+
+jobs:
+  test:
+    runs-on: ${{ inputs.runs_on }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    concurrency:
+      group: node-ci-${{ github.workflow }}-${{ github.event.repository.full_name }}-${{ github.ref }}
+      cancel-in-progress: true
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Setup pnpm
+        if: inputs.package_manager == 'pnpm'
+        uses: pnpm/action-setup@v5.0.0
+        with:
+          version: ${{ inputs.pnpm_version }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ inputs.package_manager }}
+          cache-dependency-path: |
+            ${{ inputs.working_directory }}/package-lock.json
+            ${{ inputs.working_directory }}/pnpm-lock.yaml
+            ${{ inputs.working_directory }}/yarn.lock
+
+      - name: Install dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PKG_MANAGER: ${{ inputs.package_manager }}
+          INSTALL_CMD: ${{ inputs.install_command }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INSTALL_CMD}" ]; then
+            eval "${INSTALL_CMD}"
+          else
+            case "${PKG_MANAGER}" in
+              npm)   npm ci ;;
+              pnpm)  pnpm install --frozen-lockfile ;;
+              yarn)  yarn install --immutable || yarn install --frozen-lockfile ;;
+              *)     echo "::error::unknown package_manager '${PKG_MANAGER}'"; exit 1 ;;
+            esac
+          fi
+        shell: bash
+
+      - name: Lint
+        if: inputs.lint_command != ''
+        env:
+          PKG_MANAGER: ${{ inputs.package_manager }}
+          CMD: ${{ inputs.lint_command }}
+        run: |
+          # shellcheck disable=SC2086
+          $PKG_MANAGER $CMD
+        shell: bash
+
+      - name: Test
+        if: inputs.test_command != ''
+        env:
+          PKG_MANAGER: ${{ inputs.package_manager }}
+          CMD: ${{ inputs.test_command }}
+        run: |
+          # shellcheck disable=SC2086
+          $PKG_MANAGER $CMD
+        shell: bash
+
+      - name: Publish JUnit test report
+        if: always() && inputs.test_command != ''
+        uses: mikepenz/action-junit-report@v6.4.0
+        with:
+          report_paths: ${{ inputs.junit_report_paths }}
+          check_name: "Node tests"
+          require_tests: false
+          fail_on_failure: true
+          detailed_summary: true
+          include_passed: false
+
+      - name: Upload coverage to Codecov
+        if: always() && inputs.upload_coverage && env.CODECOV_TOKEN != ''
+        uses: codecov/codecov-action@v6.0.0
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          files: ${{ inputs.coverage_paths }}
+          flags: node
+
+      - name: Build
+        if: inputs.build_command != ''
+        env:
+          PKG_MANAGER: ${{ inputs.package_manager }}
+          CMD: ${{ inputs.build_command }}
+        run: |
+          # shellcheck disable=SC2086
+          $PKG_MANAGER $CMD
+        shell: bash
