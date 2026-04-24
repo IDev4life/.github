@@ -91,7 +91,7 @@ jobs:
 
 ## Path mà workflow quét
 
-```
+```text
 <working_directory>/**/target/surefire-reports/TEST-*.xml
 <working_directory>/**/target/failsafe-reports/TEST-*.xml
 <working_directory>/**/build/test-results/**/TEST-*.xml

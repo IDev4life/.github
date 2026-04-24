@@ -16,7 +16,7 @@ problems.**
 Preferred channel: use GitHub's private vulnerability reporting on the affected
 repository — `Security` tab → `Report a vulnerability`.
 
-If private reporting is not available, email **contact@dev1sme.cloud** with:
+If private reporting is not available, email **<contact@dev1sme.cloud>** with:
 
 - a description of the issue and its impact,
 - affected repository, branch, or release,
