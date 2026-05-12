@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2](https://github.com/IDev4life/.github/compare/v1.0.1...v1.0.2) (2026-05-12)
+
+
+### Continuous Integration
+
+* bump github/codeql-action from 4.35.3 to 4.35.4 ([#7](https://github.com/IDev4life/.github/issues/7)) ([1e9c067](https://github.com/IDev4life/.github/commit/1e9c067b252b6565a0c1a261eb3bc77d9f84907d))
+* bump pnpm/action-setup from 6.0.4 to 6.0.5 ([#8](https://github.com/IDev4life/.github/issues/8)) ([b01854f](https://github.com/IDev4life/.github/commit/b01854f9ae5f25d61c4a830f8126bcac90556297))
+
 ## [1.0.1](https://github.com/IDev4life/.github/compare/v1.0.0...v1.0.1) (2026-05-05)
 
 
