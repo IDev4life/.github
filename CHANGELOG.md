@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.3](https://github.com/IDev4life/.github/compare/v1.0.2...v1.0.3) (2026-05-26)
+
+
+### Continuous Integration
+
+* bump docker/build-push-action from 7.1.0 to 7.2.0 ([#14](https://github.com/IDev4life/.github/issues/14)) ([8339851](https://github.com/IDev4life/.github/commit/83398519f9dc1273bded729bc50348eb2b9b4ae8))
+* bump docker/login-action from 4.1.0 to 4.2.0 ([#12](https://github.com/IDev4life/.github/issues/12)) ([a0f84ec](https://github.com/IDev4life/.github/commit/a0f84ece993c33e0ccf4089f82f544a410eba4a0))
+* bump github/codeql-action from 4.35.4 to 4.36.0 ([#15](https://github.com/IDev4life/.github/issues/15)) ([17b07de](https://github.com/IDev4life/.github/commit/17b07deb9ba2a8b66f0314d54e5b2e4dfa909585))
+* bump mikepenz/action-junit-report from 6.4.0 to 6.4.1 ([#13](https://github.com/IDev4life/.github/issues/13)) ([794162b](https://github.com/IDev4life/.github/commit/794162bcd10d0a14a44fde687bf32d172a6e39ce))
+* bump pnpm/action-setup from 6.0.5 to 6.0.8 ([#11](https://github.com/IDev4life/.github/issues/11)) ([f767708](https://github.com/IDev4life/.github/commit/f767708cc23d459290dcfa8f01c2689b1f64b130))
+
 ## [1.0.2](https://github.com/IDev4life/.github/compare/v1.0.1...v1.0.2) (2026-05-12)
 
 
