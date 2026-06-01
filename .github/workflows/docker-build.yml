@@ -105,7 +105,7 @@ jobs:
 
       - name: Set up QEMU (multi-arch only)
         if: contains(inputs.platforms, 'arm') || contains(inputs.platforms, 'ppc') || contains(inputs.platforms, 's390') || contains(inputs.platforms, 'riscv') || contains(inputs.platforms, '386')
-        uses: docker/setup-qemu-action@v4.0.0
+        uses: docker/setup-qemu-action@v4.1.0
 
       - name: Resolve registry credentials
         id: creds
