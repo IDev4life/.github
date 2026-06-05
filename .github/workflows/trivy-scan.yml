@@ -44,7 +44,7 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.0.3
 
       - name: Detect registry
         id: reg

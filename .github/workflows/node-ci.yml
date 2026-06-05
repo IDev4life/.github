@@ -83,7 +83,7 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
 
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.0.3
 
       - name: Setup pnpm
         if: inputs.package_manager == 'pnpm'

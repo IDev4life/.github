@@ -101,7 +101,7 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6.0.3
 
       - name: Set up QEMU (multi-arch only)
         if: contains(inputs.platforms, 'arm') || contains(inputs.platforms, 'ppc') || contains(inputs.platforms, 's390') || contains(inputs.platforms, 'riscv') || contains(inputs.platforms, '386')
