@@ -29,10 +29,10 @@ jobs:
 
     steps:
       - name: Checkout caller repo
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
 
       - name: Checkout shared validate scripts
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.1
         with:
           repository: IDev4life/.github
           ref: ${{ inputs.shared_ref }}

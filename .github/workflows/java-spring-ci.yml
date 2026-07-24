@@ -67,7 +67,7 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
 
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.1
 
       - name: Setup Java
         uses: actions/setup-java@v5.2.0
