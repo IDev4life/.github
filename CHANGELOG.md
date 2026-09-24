@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.4](https://github.com/IDev4life/.github/compare/v1.0.3...v1.0.4) (2026-09-24)
+
+
+### Continuous Integration
+
+* bump actions/setup-java from 5.2.0 to 6.0.1 ([#40](https://github.com/IDev4life/.github/issues/40)) ([5eed3ce](https://github.com/IDev4life/.github/commit/5eed3ce6c4e0a52ec7eaf8617dda5d72c907d1b1))
+* bump actions/stale from 10.2.0 to 10.3.0 ([#20](https://github.com/IDev4life/.github/issues/20)) ([a88a50c](https://github.com/IDev4life/.github/commit/a88a50c20c0b30704b909cea445a99aea080294f))
+* bump codecov/codecov-action from 6.0.0 to 6.0.1 ([#18](https://github.com/IDev4life/.github/issues/18)) ([1615cf8](https://github.com/IDev4life/.github/commit/1615cf867302004c11d284826d73e6ac0fdca06a))
+* bump docker/build-push-action from 7.2.0 to 7.4.0 ([#42](https://github.com/IDev4life/.github/issues/42)) ([e8451c1](https://github.com/IDev4life/.github/commit/e8451c186a117428da0a572705452a0a41c5e266))
+* bump docker/metadata-action from 6.0.0 to 6.1.0 ([#19](https://github.com/IDev4life/.github/issues/19)) ([5c4f2ff](https://github.com/IDev4life/.github/commit/5c4f2ff59630bc9a378c154c0f84de79ba6eedeb))
+* bump docker/setup-buildx-action from 4.0.0 to 4.1.0 ([#17](https://github.com/IDev4life/.github/issues/17)) ([cf9bdbf](https://github.com/IDev4life/.github/commit/cf9bdbff67067c94322f7da38e0a0b6c0829957a))
+* bump docker/setup-buildx-action from 4.1.0 to 4.4.0 ([#41](https://github.com/IDev4life/.github/issues/41)) ([be24d60](https://github.com/IDev4life/.github/commit/be24d60e062104fb9d55950f825fa7f0ce738542))
+* bump docker/setup-qemu-action from 4.0.0 to 4.1.0 ([#21](https://github.com/IDev4life/.github/issues/21)) ([a7a5242](https://github.com/IDev4life/.github/commit/a7a5242282497cd602744b42b649c66ae9213102))
+* bump github/codeql-action from 4.36.0 to 4.38.0 ([#39](https://github.com/IDev4life/.github/issues/39)) ([04b97c2](https://github.com/IDev4life/.github/commit/04b97c22b4f42e69e435078ba3a58eaf4e929b05))
+* bump mikepenz/action-junit-report from 6.4.1 to 6.5.0 ([#36](https://github.com/IDev4life/.github/issues/36)) ([789f256](https://github.com/IDev4life/.github/commit/789f256aaeeb5a4f4a6ebaabb9d458c102c8ae38))
+
 ## [1.0.3](https://github.com/IDev4life/.github/compare/v1.0.2...v1.0.3) (2026-05-26)
 
 
