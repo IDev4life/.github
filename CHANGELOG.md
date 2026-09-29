@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.5](https://github.com/IDev4life/.github/compare/v1.0.4...v1.0.5) (2026-09-29)
+
+
+### Continuous Integration
+
+* bump actions/setup-node from 6.4.0 to 7.0.0 ([#44](https://github.com/IDev4life/.github/issues/44)) ([3b23d18](https://github.com/IDev4life/.github/commit/3b23d189a218857185f0237482efbd0b0dd11af7))
+* bump actions/setup-python from 6.2.0 to 7.0.0 ([#45](https://github.com/IDev4life/.github/issues/45)) ([4559db5](https://github.com/IDev4life/.github/commit/4559db5fcaf8e5cd40b4ce553efc075a7855f33a))
+* bump codecov/codecov-action from 6.0.1 to 7.1.1 ([#47](https://github.com/IDev4life/.github/issues/47)) ([16c7bad](https://github.com/IDev4life/.github/commit/16c7bad38d70b1bbe6363c8b897bd43f76159ab2))
+* bump docker/login-action from 4.2.0 to 4.6.0 ([#48](https://github.com/IDev4life/.github/issues/48)) ([43c1106](https://github.com/IDev4life/.github/commit/43c1106b9d2963201ce4deb8f33f8193cdb1f640))
+* bump docker/setup-buildx-action from 4.4.0 to 4.4.1 ([#46](https://github.com/IDev4life/.github/issues/46)) ([73e80d6](https://github.com/IDev4life/.github/commit/73e80d689ea8449e4b3c3e599dc2c946117bf1db))
+
 ## [1.0.4](https://github.com/IDev4life/.github/compare/v1.0.3...v1.0.4) (2026-09-24)
 
 
