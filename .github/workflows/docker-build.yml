@@ -166,7 +166,7 @@ jobs:
 
       - name: Attest build provenance
         if: inputs.push && inputs.provenance != 'false' && steps.build.outputs.digest != ''
-        uses: actions/attest-build-provenance@v4.1.0
+        uses: actions/attest-build-provenance@v4.2.2
         with:
           subject-name: ${{ inputs.registry }}/${{ inputs.image_name }}
           subject-digest: ${{ steps.build.outputs.digest }}
