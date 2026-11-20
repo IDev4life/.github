@@ -120,7 +120,7 @@ jobs:
       # Archive raw reports (always, for debugging) --------------------------
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: java-test-reports
           if-no-files-found: ignore
